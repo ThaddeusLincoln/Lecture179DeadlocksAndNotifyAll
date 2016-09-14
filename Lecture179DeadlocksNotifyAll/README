@@ -1,0 +1,104 @@
+We can also synchronize static methods and static object, when we do that the lock that's used is 
+owned by the class object associated with the object's class. 
+
+Synchronization is REENTRANT, meaning that if a thread acquires an objects lock and within the 
+synchronized code it calls a method that's using the same object to synchronize some code, 
+the thread can keep executing because it already has the objects lock. 
+In other words a thread can acquire a thread it already owns. 
+
+If the previous wasn't true, synchronization would be a lot trickier.
+
+CRITICAL SECTION just refers to the code that's referencing the code which is referencing a shared 
+resource like a variable. Only one thread at a time should be able to execute a CRITICAL SECTION.
+
+There's also the term THREAD-SAFE: when a class or a method is THREAD-SAFE this means that the developer 
+(creator of the class) has synchronized all the critical section within the code, 
+so that we as developer (who's using that class/method) don't have to worry about the thread 
+interference or race condition. So, if we're using a method or class that isn't THREAD-SAFE 
+then the developer hasn't added any synchronization in which case we'll be responsible for 
+adding synchronization if we want multiple threads to be able to safely use the code. 
+
+Thinking back, in JavaFx the modification of all UI components must me all coded in the JavaFX 
+runtime thread, and this is due to the fact that non of the UI components are THREAD-SAFE in JavaFX, 
+so rather than forcing every developer to properly synchronize any code that modifies 
+the UI the JavaFX creators, instead chose to to force all code that modifies UI components 
+to run in the JavaFX runtime thread. Since only one thread (the JavaFX runtime thread) can 
+modify the UI components there won't be any thread interference. 
+
+NOTE: when we're synchronizing code, we should synchronize only the code that must be synchronized. 
+In the example, only the for loop, by acquiring the lock of the current object by synchronize(this) 
+would be enough and the right action to be taken. We don't want threads to be suspended 
+or block unnecessarily because that can have a negative impact in an application's performance 
+as well as the user experience. We definitely want to keep the we synchronized to an absolute minimum. 
+
+There are specific methods that can only be called within sync code: 
+
+1. notify()
+2. notifyAll()
+
+================ NOTIFY & NOTIFY-ALL ======================================
+
+The Producer/Consumer example is a classic for a first approach to this.
+
+Only one sync method can run at the time, so the information it holds get blocked, 
+so no other thread can access to it, because the initial thread is holding the lock 
+of the object/s that it is using and the other threads are blocked waiting for the 
+initial thread to release the lock and this is called : DEADLOCK.
+
+So, if the situation would happen that we need to synchronize 2+ methods, 
+the option we have is using wait, notify, and notifyAll method. 
+
+WAIT(): when a thread calls the wait method, it will suspend the execution and 
+release whatever lock it's holding until another thread issues a notification that 
+something important has happened. This mentioned notification is issued by 
+calling the NOTITY() or NOTIFY-ALL() methods.
+
+NOTE : in the code we loop around the WAIT() method, this is done instead of using an if (...) 
+else {wait()} because we always want to call WAIT(). For instance within a for loop there's 
+testing for whatever condition we're waiting on. Because when a thread is notified 
+to wake up there's no guarantee that it's being woken up because the condition is that is 
+waiting on has changed. It could be for instance that the operating system has woken it up 
+for another reason, or because an InterruptedException was yield. So, 
+in conclusion, we always want to call WAIT() within a loop so that when it returns because 
+there's a notification of some sort we'll go back to the beginning of the loop, 
+where we check whatever condition we're interested in and then we call WAIT() 
+again if the condition hasn't changed. 
+
+IMPORTANT : never ever assume that a thread has been woken up because the 
+condition that's waiting on has changed, it could be anything.
+
+NOTIFY-ALL: we can't notify a specific thread and that's because notify() doesn't accept any parameters, 
+it's conventional to use notifyAll() unless we're dealing with a situation where 
+there are a significant number of thread that all perform a similar task waiting for a lock. 
+So in that case we don't want to wake up every thread because when there's a lot of them 
+that could result in a huge performance problem. In that case we would call notify() 
+so that only one thread is woken up and since all the threads are waiting to do a similar 
+task whichever thread is woken up should be able to proceed. 
+
+NOTE :when sync code we should always keep in mind that threads can be suspended while 
+executing a single line of code. A single line of code may call a method that contains 
+hundreds of lines of code; or a single line of code can contain many operations; 
+and a thread can be suspended before or after each operation. A thread can be even suspended 
+while executing an printLn() method, not to speak of concatenations, etc. 
+
+In response to the that there's a few ATOMIC OPERATIONS in Java that happen all at once 
+and a thread can't be suspended in the middle of doing them:
+
+- Reading/Writing reference variables, e.g myObject1 = myObject2 would be ATOMIC so with the 
+thread can't be suspended in the middle of executing that statement.
+- Also a thread can't be suspended if reading/writing primitive variables except those of type 
+long and double. So the JVM might require 2 operations to read/write long and doubles and a 
+thread can be suspended between each operation. E.g, a thread can't be suspended in the middle 
+of executing int myInt = 10; but it can be suspended in double myDouble = 10.0.
+- Reading/Writing all variables declared volatile 
+
+NOTE: concerning the COLLECTION classes, some Collections aren't THREAD-SAFE, i.e, they're not sync, 
+that is the case of ArrayList. In the documentation says that the implementation is not sync, 
+which means that if we're using an arrayList in out application and multiple threads can access 
+it at the same time, we have to be responsible for synchronizing the code that uses the arrayList. 
+Alternatively after creating the ArrayList we can call Collections.synchronizeList() and 
+passed the arrayList to it, so we still have to sync itering over the list though. 
+
+TIP : the VECTOR class is already sync so if we use it in our application we wouldn't have 
+to worry about multiple threads accessing the vector object at the same time
+
